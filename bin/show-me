@@ -1,4 +1,32 @@
 #!/bin/sh
+help() {
+  cat <<-EOF
+TODO
+EOF
+}
+
+if [[ -z $1 ]]; then
+  help
+  exit 0
+fi
+
+while [[ $1 == -* ]]; do
+  case "$1" in
+    -w)
+      watch=1
+      shift
+      ;;
+    -h|--help)
+      help
+      exit 0
+      ;;
+    -*)
+      echo "Unrecognized command: $1"
+      exit 1
+      ;;
+  esac
+done
+
 cont=$(docker ps | awk '/show-me/{print $1}')
 
 if [[ "$1" == "kill" ]]; then
@@ -8,6 +36,10 @@ if [[ "$1" == "kill" ]]; then
   exit 0
 fi
 
+if [[ ! -f "$1" ]]; then
+  echo "Could not find file: $1"
+  exit 1
+fi
 
 if [[ -z $cont ]]; then
   cont=$(docker run --rm -p 5555:8080 -d jonasbak/show-me:latest)
@@ -15,6 +47,23 @@ if [[ -z $cont ]]; then
 fi
 
 url="http://localhost:5555"
-curl -X POST --data-binary "@./$1" "$url" && echo "$url"
-# Maybe do something like:
-# docker cp $1 "$cont:/app/in"
+file="$1"
+post() {
+  curl -X POST --data-binary "@./$file" "$url" 
+}
+
+if [[ $watch ]]; then
+  if ! type inotifywait &>/dev/null ; then
+    echo "You need to install inotify-tools to be able to watch for changes"
+    exit 1
+  fi
+  post && echo $url
+  inotifywait -e close_write,moved_to,create -m . |
+    while read -r directory events filename; do
+      if [[ "$filename" == "$file" ]]; then
+        post
+      fi
+    done
+else
+  post && echo $url
+fi
