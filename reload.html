@@ -1,0 +1,7 @@
+<script>
+  setInterval(() => {
+    fetch('/ts').then(r => r.text()).then(hash => {
+      if (hash !== /*hash*/) window.location.reload();
+    });
+  }, 3500);
+</script>

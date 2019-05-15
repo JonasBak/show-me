@@ -9,5 +9,6 @@ RUN curl -sL https://github.com/jgm/pandoc/releases/download/2.7.2/pandoc-2.7.2-
 ADD ./req.txt /app
 RUN pip install --no-cache -r ./req.txt
 ADD ./server.py /app
+ADD ./reload.html /app
 
 CMD ["python", "server.py"]
