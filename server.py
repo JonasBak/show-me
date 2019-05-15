@@ -8,6 +8,8 @@ app = Flask(__name__)
 # TODO:
 # Fix /ts for timestamp/hash
 # Create js script to be added to the response to check for updates
+# docker kill $(docker ps | awk '/show-me/{print $1}')
+# curl -X POST --data "$(cat $1)" http://localhost:8080
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET'])
