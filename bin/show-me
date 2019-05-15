@@ -10,9 +10,11 @@ fi
 
 
 if [[ -z $cont ]]; then
-  docker run --rm -p 5555:8080 -d jonasbak/show-me:latest > /dev/null
+  cont=$(docker run --rm -p 5555:8080 -d jonasbak/show-me:latest)
   sleep 1
 fi
 
 url="http://localhost:5555"
-curl -X POST --data "$(cat $1)" http://localhost:5555 && echo "$url"
+curl -X POST --data-binary "@./$1" "$url" && echo "$url"
+# Maybe do something like:
+# docker cp $1 "$cont:/app/in"

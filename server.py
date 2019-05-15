@@ -21,9 +21,12 @@ def get(path):
 
 @app.route('/', defaults={'path': ''}, methods=['POST'])
 def post(path):
-    with open('in', 'w') as f:
-        f.write(request.get_data().decode('utf-8'))
-    call(['pandoc', '-t', 'html', '-o', 'out', 'in'])
+    try:
+        with open('in', 'wb') as f:
+            f.write(request.get_data())
+        call(['pandoc', '-t', 'html', '-o', 'out', 'in'])
+    except Exception as e:
+        return '', 400
     return '', 200
 
 
