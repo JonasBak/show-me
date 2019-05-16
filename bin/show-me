@@ -48,8 +48,23 @@ fi
 
 url="http://localhost:5555"
 file="$1"
+from="$(
+  case "${1##*.}" in
+    tex|latex)
+      echo latex
+      ;;
+    md)
+      echo gfm
+      ;;
+    docx)
+      echo docx
+      ;;
+    *)
+      ;;
+  esac
+)"
 post() {
-  curl -X POST --data-binary "@./$file" "$url" 
+  curl -X POST --data-binary "@./$file" "$url?from=$from"
 }
 
 if [[ $watch ]]; then

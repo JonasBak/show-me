@@ -1,6 +1,6 @@
-from subprocess import call
-
 import hashlib
+import sys
+from subprocess import call
 
 from flask import Flask, request
 from gevent.pywsgi import WSGIServer
@@ -8,8 +8,6 @@ from gevent.pywsgi import WSGIServer
 app = Flask(__name__)
 
 fh = ''
-with open('reload.html', 'r') as f:
-    reload = f.read()
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET'])
@@ -17,7 +15,7 @@ def get(path):
     try:
         with open('out', 'r') as f:
             file = f.read()
-        return reload.replace('/*hash*/', f'"{fh}"') + '\n' + file, 200
+        return file.replace('/*hash*/', f'"{fh}"'), 200
     except Exception as e:
         return 'No file loaded yet', 404
 
@@ -29,13 +27,27 @@ def post(path):
         file = request.get_data()
         fh = hashlib.md5(file).hexdigest()
         f.write(file)
-    call(['pandoc', '-t', 'html', '-o', 'out', 'in'])
+    args = [
+        'pandoc', '-t', 'html', '-o', 'out', '-M', 'title=show-me', '-H',
+        'reload.html'
+    ]
+    if (len(request.args.get('from', '')) > 0):
+        args += ['-f', request.args.get('from')]
+    args += ['in']
+    call(args)
     return '', 200
 
 
 @app.route('/ts', defaults={'path': ''}, methods=['GET'])
 def ts(path):
     return fh, 200
+
+
+@app.after_request
+def flush_streams(response):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    return response
 
 
 if __name__ == '__main__':
