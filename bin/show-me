@@ -49,7 +49,7 @@ fi
 url="http://localhost:5555"
 file="$1"
 from="$(
-  case "${1##*.}" in
+  case "${file##*.}" in
     tex|latex)
       echo latex
       ;;
@@ -64,7 +64,7 @@ from="$(
   esac
 )"
 post() {
-  curl -X POST --data-binary "@./$file" "$url?from=$from"
+  curl -X POST --data-binary "@./$file" "$url?from=$from&filename=$file"
 }
 
 if [[ $watch ]]; then

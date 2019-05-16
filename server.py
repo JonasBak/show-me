@@ -28,8 +28,8 @@ def post(path):
         fh = hashlib.md5(file).hexdigest()
         f.write(file)
     args = [
-        'pandoc', '-t', 'html', '-o', 'out', '-M', 'title=show-me', '-H',
-        'reload.html'
+        'pandoc', '-t', 'html', '-o', 'out', '-H', 'reload.html', '-M',
+        f'title={request.args.get("filename", " ")}'
     ]
     if (len(request.args.get('from', '')) > 0):
         args += ['-f', request.args.get('from')]
