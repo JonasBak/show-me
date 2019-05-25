@@ -4,6 +4,7 @@ import (
   "fmt"
   "net/http"
   "os/exec"
+  "os"
   "hash/fnv"
   "strings"
 )
@@ -46,7 +47,7 @@ func HelloServer(w http.ResponseWriter, r *http.Request) {
       args = append(args, "-f", from[0])
     }
 
-    cmd := exec.Command("pandoc", args...)
+    cmd := exec.Command(os.Getenv("pandoc"), args...)
     cmd.Stdin = r.Body
 
     b, err := cmd.Output()

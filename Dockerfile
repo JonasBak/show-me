@@ -1,14 +1,19 @@
-FROM python:3.6-slim
+FROM golang:alpine as build
 
-WORKDIR /app
+WORKDIR /build
 
-RUN apt-get update && apt-get install -y curl inotify-tools
-RUN curl -sL https://github.com/jgm/pandoc/releases/download/2.7.2/pandoc-2.7.2-1-amd64.deb -o pandoc.deb  \
-          && dpkg -i pandoc.deb
+RUN apk --no-cache add curl
+RUN curl -sL https://github.com/jgm/pandoc/releases/download/2.7.2/pandoc-2.7.2-linux.tar.gz -o pandoc.tar.gz \
+          && tar -xf pandoc.tar.gz
 
-ADD ./req.txt /app
-RUN pip install --no-cache -r ./req.txt
-ADD ./server.py /app
-ADD ./reload.html /app
+ADD ./server.go /build
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server .
 
-CMD ["python", "server.py"]
+FROM scratch
+
+COPY --from=build /build/server .
+COPY --from=build /build/pandoc-2.7.2/bin/pandoc .
+COPY ./reload.html .
+
+ENV pandoc="./pandoc"
+CMD ["./server"]
