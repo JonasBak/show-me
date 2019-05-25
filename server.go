@@ -7,6 +7,9 @@ import (
   "os"
   "hash/fnv"
   "strings"
+  "io"
+  "io/ioutil"
+  "bytes"
 )
 
 
@@ -50,39 +53,52 @@ func getcontent(path string) string {
 }
 
 func writeindices(w http.ResponseWriter) {
+  str := "## Files:\n"
   for key, _ := range files {
-      fmt.Fprintf(w, fmt.Sprintf("<a href=\"%s\">%s</a><br>", key, key))
+    str += fmt.Sprintf("* [%s](%s)\n", key, key)
   }
+  str = pandoc(ioutil.NopCloser(bytes.NewReader([]byte(str))), "")
+  // TODO use amount of files as ts for / path
+  fmt.Fprintf(w, strings.Replace(str, "/*hash*/", "\"0\"", 1))
+}
+
+func pandoc(in io.ReadCloser, from string) string {
+  args := []string{"-t", "html", "-H", "reload.html", "-H", "style.html"}
+  if len(from) > 0 {
+    args = append(args, "-f", from)
+  }
+
+  cmd := exec.Command(os.Getenv("pandoc"), args...)
+  cmd.Stdin = in
+
+  b, err := cmd.Output()
+  if err != nil {
+    panic(err)
+  }
+  return string(b)
 }
 
 func FileServer(w http.ResponseWriter, r *http.Request) {
   if r.Method == http.MethodGet {
-    if r.URL.Path == "/" {
-      writeindices(w)
-      return
-    }
     ts, ok := r.URL.Query()["ts"]
     if ok && len(ts) == 1 {
       fmt.Fprintf(w, gethash(r.URL.Path))
     } else {
+      if r.URL.Path == "/" {
+        writeindices(w)
+        return
+      }
       fmt.Fprintf(w, getcontent(r.URL.Path))
     }
   } else if r.Method == http.MethodPost {
-    args := []string{"-t", "html", "-H", "reload.html", "-H", "style.html"}
 
-    from, ok := r.URL.Query()["from"]
-    if ok && len(from) == 1 && len(from[0]) > 0 {
-      args = append(args, "-f", from[0])
+    from_q, ok := r.URL.Query()["from"]
+    from := ""
+    if !ok && len(from_q) == 1 && len(from_q[0]) > 0 {
+      from = from_q[0]
     }
 
-    cmd := exec.Command(os.Getenv("pandoc"), args...)
-    cmd.Stdin = r.Body
-
-    b, err := cmd.Output()
-    if err != nil {
-      panic(err)
-    }
-    content := string(b)
+    content := pandoc(r.Body, from)
     ts := hash(content)
     f := file {ts, strings.Replace(content, "/*hash*/", fmt.Sprintf("\"%d\"", ts), 1)}
 
