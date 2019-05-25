@@ -48,6 +48,7 @@ fi
 
 url="http://localhost:5555"
 file="$1"
+file_path="${PWD//\//.}.$file"
 from="$(
   case "${file##*.}" in
     tex|latex)
@@ -64,7 +65,7 @@ from="$(
   esac
 )"
 post() {
-  curl -X POST --data-binary "@./$file" "$url?from=$from&filename=$file"
+  curl -X POST --data-binary "@./$file" "$url?from=$from&filename=$file_path"
 }
 
 if [[ $watch ]]; then

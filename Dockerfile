@@ -14,6 +14,7 @@ FROM scratch
 COPY --from=build /build/server .
 COPY --from=build /build/pandoc-2.7.2/bin/pandoc .
 COPY ./reload.html .
+COPY ./style.html .
 
 ENV pandoc="./pandoc"
 CMD ["./server"]

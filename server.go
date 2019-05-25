@@ -68,7 +68,7 @@ func FileServer(w http.ResponseWriter, r *http.Request) {
       fmt.Fprintf(w, getcontent(r.URL.Path))
     }
   } else if r.Method == http.MethodPost {
-    args := []string{"-t", "html", "-H", "reload.html"}
+    args := []string{"-t", "html", "-H", "reload.html", "-H", "style.html"}
 
     from, ok := r.URL.Query()["from"]
     if ok && len(from) == 1 && len(from[0]) > 0 {
