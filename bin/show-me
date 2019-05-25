@@ -42,7 +42,7 @@ if [[ ! -f "$1" ]]; then
 fi
 
 if [[ -z $cont ]]; then
-  cont=$(docker run --rm -p 5555:8080 -d jonasbak/show-me:latest)
+  cont=$(docker run --rm -p 5555:5555 -d jonasbak/show-me:latest)
   sleep 1
 fi
 

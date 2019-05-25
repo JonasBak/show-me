@@ -21,7 +21,7 @@ var (
 
 func main() {
   loaded = file {0, "No file loaded yet"}
-  http.HandleFunc("/", HelloServer)
+  http.HandleFunc("/", FileServer)
   http.HandleFunc("/ts", TsServer)
   http.ListenAndServe(":5555", nil)
 }
@@ -36,7 +36,7 @@ func TsServer(w http.ResponseWriter, r *http.Request) {
   fmt.Fprintf(w, fmt.Sprint(loaded.hash))
 }
 
-func HelloServer(w http.ResponseWriter, r *http.Request) {
+func FileServer(w http.ResponseWriter, r *http.Request) {
   if r.Method == http.MethodGet {
     fmt.Fprintf(w, loaded.content)
   } else if r.Method == http.MethodPost {
