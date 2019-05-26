@@ -14,7 +14,7 @@ import (
 
 
 type file struct {
-  hash uint32
+  hash string
   content string
 }
 
@@ -24,45 +24,45 @@ var (
 
 func main() {
   files = make(map[string]file)
+  writeindices()
   http.HandleFunc("/", FileServer)
   http.ListenAndServe(":5555", nil)
 }
 
-func hash(s string) uint32 {
+func hash(s string) string {
   h := fnv.New32a()
   h.Write([]byte(s))
-  return h.Sum32()
+  return fmt.Sprint(h.Sum32())
 }
 
 func gethash(path string) string {
-  f, ok := files[path]
+  f, ok := files[path[1:]]
   if ok {
-    return fmt.Sprint(f.hash)
-  } else {
-    return "0"
+    return f.hash
   }
+  return ""
 }
 
 func getcontent(path string) string {
-  f, ok := files[path]
+  f, ok := files[path[1:]]
   if ok {
     return f.content
-  } else {
-    return "No file loaded yet"
   }
+  return ""
 }
 
-func writeindices(w http.ResponseWriter) {
+func writeindices() {
   str := "## Files:\n"
   for key, _ := range files {
-    str += fmt.Sprintf("* [%s](%s)\n", key, key)
+    if key == "" {
+      continue
+    }
+    str += fmt.Sprintf("* [%[1]s](/%[1]s)\n", key)
   }
-  str = pandoc(ioutil.NopCloser(bytes.NewReader([]byte(str))), "")
-  // TODO use amount of files as ts for / path
-  fmt.Fprintf(w, strings.Replace(str, "/*hash*/", "\"0\"", 1))
+  files[""] = pandoc(ioutil.NopCloser(bytes.NewReader([]byte(str))), "gfm")
 }
 
-func pandoc(in io.ReadCloser, from string) string {
+func pandoc(in io.ReadCloser, from string) file {
   args := []string{"-t", "html", "-H", "reload.html", "-H", "style.html"}
   if len(from) > 0 {
     args = append(args, "-f", from)
@@ -75,7 +75,9 @@ func pandoc(in io.ReadCloser, from string) string {
   if err != nil {
     panic(err)
   }
-  return string(b)
+  content := string(b)
+  ts := hash(content)
+  return file {ts, strings.Replace(content, "/*hash*/", fmt.Sprintf("\"%s\"", ts), 1)}
 }
 
 func FileServer(w http.ResponseWriter, r *http.Request) {
@@ -84,30 +86,28 @@ func FileServer(w http.ResponseWriter, r *http.Request) {
     if ok && len(ts) == 1 {
       fmt.Fprintf(w, gethash(r.URL.Path))
     } else {
-      if r.URL.Path == "/" {
-        writeindices(w)
-        return
-      }
       fmt.Fprintf(w, getcontent(r.URL.Path))
     }
   } else if r.Method == http.MethodPost {
+    filename_q, ok := r.URL.Query()["filename"]
+    if !ok || len(filename_q) != 1 {
+      fmt.Println("No file name provided...")
+      return
+    }
+    filename := filename_q[0]
 
     from_q, ok := r.URL.Query()["from"]
     from := ""
-    if !ok && len(from_q) == 1 && len(from_q[0]) > 0 {
+    if ok && len(from_q) == 1 && len(from_q[0]) > 0 {
       from = from_q[0]
     }
 
-    content := pandoc(r.Body, from)
-    ts := hash(content)
-    f := file {ts, strings.Replace(content, "/*hash*/", fmt.Sprintf("\"%d\"", ts), 1)}
+    f := pandoc(r.Body, from)
 
-    filename, ok := r.URL.Query()["filename"]
-    if ok && len(filename) == 1 {
-      fmt.Printf("File added at /%s\n", filename[0])
-      files[fmt.Sprintf("/%s", filename[0])] = f
-    } else {
-      files["unknown"] = f
+    fmt.Printf("File added at /%s\n", filename)
+    if _, ok := files[filename]; !ok {
+      defer writeindices()
     }
+    files[filename] = f
   }
 }
