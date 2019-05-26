@@ -10,12 +10,14 @@ import (
   "io"
   "io/ioutil"
   "bytes"
+  "time"
 )
 
 
 type file struct {
   hash string
   content string
+  la time.Time
 }
 
 var (
@@ -25,8 +27,26 @@ var (
 func main() {
   files = make(map[string]file)
   writeindices()
+  go watchdelete()
   http.HandleFunc("/", FileServer)
   http.ListenAndServe(":5555", nil)
+}
+
+func watchdelete() {
+  th := 10 * time.Minute
+  for {
+    for key, _ := range files {
+      if key == "" {
+        continue
+      }
+      if time.Now().Sub(files[key].la) > th {
+        fmt.Printf("Removing file %s", key)
+        delete(files, key)
+        writeindices()
+      }
+    }
+    time.Sleep(th)
+  }
 }
 
 func hash(s string) string {
@@ -38,6 +58,8 @@ func hash(s string) string {
 func gethash(path string) string {
   f, ok := files[path[1:]]
   if ok {
+    f.la = time.Now()
+    files[path[1:]] = f
     return f.hash
   }
   return ""
@@ -46,6 +68,8 @@ func gethash(path string) string {
 func getcontent(path string) string {
   f, ok := files[path[1:]]
   if ok {
+    f.la = time.Now()
+    files[path[1:]] = f
     return f.content
   }
   return ""
@@ -77,7 +101,7 @@ func pandoc(in io.ReadCloser, from string) file {
   }
   content := string(b)
   ts := hash(content)
-  return file {ts, strings.Replace(content, "/*hash*/", fmt.Sprintf("\"%s\"", ts), 1)}
+  return file {ts, strings.Replace(content, "/*hash*/", fmt.Sprintf("\"%s\"", ts), 1), time.Now()}
 }
 
 func FileServer(w http.ResponseWriter, r *http.Request) {
