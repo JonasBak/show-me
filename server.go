@@ -114,7 +114,7 @@ func FileServer(w http.ResponseWriter, r *http.Request) {
     }
   } else if r.Method == http.MethodPost {
     filename_q, ok := r.URL.Query()["filename"]
-    if !ok || len(filename_q) != 1 {
+    if !ok || len(filename_q) != 1 || len(filename_q[0]) == 0 {
       fmt.Println("No file name provided...")
       return
     }
